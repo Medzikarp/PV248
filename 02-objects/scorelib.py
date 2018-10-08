@@ -52,16 +52,19 @@ class Print:
         print('Composer:', '; '.join([str(composer) for composer in self.composition().authors]))
         print('Title:', self.composition().name)
         print('Genre:', self.composition().genre)
-        print('Key:', self.composition().key)
+        print('Key:', self.composition().key if self.composition().key is not None else "")
         print('Composition Year:', self.composition().year if self.composition().year else "")
         print('Publication Year: ')
         print('Edition:', self.edition.name)
         print('Editor:', ''.join([str(editor) for editor in self.edition.authors]))
         for i,voice in enumerate(self.composition().voices):
             print('Voice ', str(i+1), ': ', voice, sep='')
-        print('Partiture:', 'yes' if self.partiture else 'no')
+        partiture = ""
+        if self.partiture is not None:
+            partiture = "yes" if self.partiture else "no"
+        print('Partiture:', partiture)
         print('Incipit:', self.composition().incipit)
-        print("\n")
+        print("")
 
     def composition(self):
         return self.edition.composition
@@ -71,7 +74,9 @@ def load(file):
     lines = f.read()
     result_list = []
     for single_record in lines.split("\n\n"):
-        result_list.append(extract_record(single_record))
+        # filter out records without Print number
+        if 'Print Number' in single_record:
+            result_list.append(extract_record(single_record))
 
     result_list.sort(key=lambda x: int(x.print_id))
     return result_list
@@ -166,10 +171,12 @@ def extract_record(record):
 
 
 def get_boolean(string):
-    if string == 'yes' or string == 'Yes':
+    if 'yes' in string:
         return True
-    else:
+    elif 'no' in string:
         return False
+    else:
+        return None
 
 def parse_people(string):
     data = [i.strip() for i in string.split(';') if i.strip()]
@@ -177,14 +184,12 @@ def parse_people(string):
     re_year = re.compile(r'\(([0-9]{4})?--([0-9]{4})?\)')
     for auth in data:
         person = Person()
-        year = (None, None)
         match = re_year.search(auth)
         if match:
             if (match.group(1)):
                 person.born = int(match.group(1))
             if (match.group(2)):
                 person.died = int(match.group(2))
-
         auth = re_year.sub('', auth).strip()
         person.name = auth
         res.append(person)
