@@ -134,7 +134,7 @@ def extract_record(record):
 
         m = re.match(genrePattern, line)
         if m is not None:
-            composition.genre = m.group(1)
+            composition.genre = m.group(1).strip()
             continue
 
         m = re.match(compositionYearPattern, line)
