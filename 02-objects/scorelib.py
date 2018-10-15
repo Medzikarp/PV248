@@ -4,14 +4,20 @@ class Voice:
     def __init__(self):
         self.range = ""
         self.name = ""
+
     def __str__(self):
-        return str(self.range) + str(self.name)
+        voiceRange = (self.range if self.range else '')
+        voiceSeparator = (', ' if self.range and self.name else '')
+        voiceName = (self.name if self.name else '')
+        return voiceRange + voiceSeparator + voiceName
+
 
 class Person:
     def __init__(self):
         self.name = None
         self.born = None
         self.died = None
+
     def __str__(self):
         age = ""
         if self.born is not None:
@@ -23,6 +29,7 @@ class Person:
             if self.died is not None:
                 age = ' (--{died})'.format(died = self.died)
         return self.name + age
+
 
 class Composition:
     def __init__(self):
@@ -40,6 +47,7 @@ class Edition:
         self.composition = Composition()
         self.authors = []
         self.name = None
+
 
 class Print:
     def __init__(self):
@@ -69,6 +77,7 @@ class Print:
     def composition(self):
         return self.edition.composition
 
+
 def load(file):
     f = open(file, 'r')
     lines = f.read()
@@ -80,6 +89,7 @@ def load(file):
 
     result_list.sort(key=lambda x: int(x.print_id))
     return result_list
+
 
 def extract_record(record):
 
@@ -100,7 +110,6 @@ def extract_record(record):
     edition = Edition()
     edition.composition = composition
     print_obj.edition = edition
-
 
     for line in record.split("\n"):
         m = re.match(printNumberPattern, line)
@@ -152,7 +161,7 @@ def extract_record(record):
                     voice.range = voice_record.strip()
                 else:
                     names.append(voice_record.strip())
-            voice.name = ' '.join(names)
+            voice.name = ', '.join(names)
             composition.voices.append(voice)
             continue
 
@@ -166,7 +175,6 @@ def extract_record(record):
             edition.authors = parse_people(m.group(1))
             continue
 
-
     return print_obj
 
 
@@ -177,6 +185,7 @@ def get_boolean(string):
         return False
     else:
         return None
+
 
 def parse_people(string):
     data = [i.strip() for i in string.split(';') if i.strip()]
