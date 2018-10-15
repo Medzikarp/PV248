@@ -129,7 +129,7 @@ def extract_record(record):
 
         m = re.match(keyPattern, line)
         if m is not None:
-            composition.key = m.group(1)
+            composition.key = m.group(1).strip()
             continue
 
         m = re.match(genrePattern, line)
