@@ -60,7 +60,7 @@ class Print:
         print('Composer:', '; '.join([str(composer) for composer in self.composition().authors]))
         print('Title:', self.composition().name)
         print('Genre:', self.composition().genre)
-        print('Key:', self.composition().key if self.composition().key is not None else "")
+        print('Key:', self.composition().key if self.composition().key else "")
         print('Composition Year:', self.composition().year if self.composition().year else "")
         print('Publication Year: ')
         print('Edition:', self.edition.name)
