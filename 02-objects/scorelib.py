@@ -119,12 +119,12 @@ def extract_record(record):
 
         m = re.match(titlePattern, line)
         if m is not None:
-            composition.name = m.group(1)
+            composition.name = m.group(1).strip()
             continue
 
         m = re.match(incipitPattern, line)
         if m is not None:
-            composition.incipit = m.group(1).split(',')[0]
+            composition.incipit = m.group(1)
             continue
 
         m = re.match(keyPattern, line)
