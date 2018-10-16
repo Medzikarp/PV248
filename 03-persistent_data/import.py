@@ -118,15 +118,9 @@ def store_to_db(conn, prints):
 
 conn = create_connection("scorelib.dat")
 create_tables(conn, "scorelib.sql")
-
 prints = load("scorelib.txt")
 store_to_db(conn, prints)
 conn.commit()
-
-list_table("edition_author")
-
-
 conn.close
-print("-----------finished------------------")
 
 
