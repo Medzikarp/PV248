@@ -1,5 +1,6 @@
 import sqlite3
 from scorelib import *
+import sys
 
 
 def create_connection(db_file):
@@ -40,20 +41,26 @@ def create_tables(conn, sqlFile):
 
 
 def store_person(conn, author, stored_people):
+
+    author_born = author.name + '_born'
+    author_died = author.name + '_died'
+
     if author.name not in stored_people:
         #new record
         author_id = insert_object(conn, "person",
-                                 ("born", "died", "name"),
-                                 (author.born, author.died, author.name))
+                                  ("born", "died", "name"),
+                                  (author.born, author.died, author.name))
         stored_people[author.name] = author_id
+        if author.born:
+            stored_people[author_born] = author.born
+        if author.died:
+            stored_people[author_died] = author_died
     else:
         #already stored, just update
         author_id = stored_people[author.name]
-        author_born = author.name + '_born'
-        author_died = author.name + '_died'
 
-        if (author_born not in stored_people):
-            if (author_died not in stored_people):
+        if (author_born not in stored_people and author.born is not None):
+            if (author_died not in stored_people and author.died is not None):
                 update_object(conn, 'person', ('born', 'died'), (author.born, author.died, author_id), 'id')
                 stored_people[author_born] = author.born
                 stored_people[author_died] = author_died
@@ -62,7 +69,7 @@ def store_person(conn, author, stored_people):
                 stored_people[author_born] = author.born
 
         else:
-            if (author_died not in stored_people):
+            if (author_died not in stored_people and author.died is not None):
                 update_object(conn, 'person', ('died'), (author.died, author_id), 'id')
                 stored_people[author_died] = author_died
     return author_id
@@ -86,7 +93,7 @@ def store_to_db(conn, prints):
             for voice in composition.voices:
                 insert_object(conn, "voice",
                               ("number", "score", "range", "name"),
-                              (composition.voices.index(voice), score_id, voice.range, voice.name))
+                              (composition.voices.index(voice) + 1, score_id, voice.range, voice.name))
 
         for score_author in composition.authors:
             author_id = store_person(conn, score_author, stored_people)
@@ -112,9 +119,9 @@ def store_to_db(conn, prints):
 
 
 
-conn = create_connection("scorelib.dat")
+conn = create_connection(sys.argv[2])
 create_tables(conn, "scorelib.sql")
-prints = load("scorelib.txt")
+prints = load(sys.argv[1])
 store_to_db(conn, prints)
 conn.commit()
 conn.close

@@ -64,7 +64,7 @@ class Print:
         print('Composition Year:', self.composition().year if self.composition().year else "")
         print('Publication Year: ')
         print('Edition:', self.edition.name)
-        print('Editor:', ''.join([str(editor) for editor in self.edition.authors]))
+        print('Editor:', ', '.join([str(editor) for editor in self.edition.authors]))
         for i,voice in enumerate(self.composition().voices):
             print('Voice ', str(i+1), ': ', voice, sep='')
         partiture = ""
@@ -144,7 +144,7 @@ def extract_record(record):
 
         m = re.match(composersPattern, line)
         if m is not None:
-            composition.authors = parse_people(m.group(1))
+            composition.authors = parse_composers(m.group(1))
             continue
 
         m = re.match(editionPattern, line)
@@ -172,7 +172,7 @@ def extract_record(record):
 
         m = re.match(editorPattern, line)
         if m is not None:
-            edition.authors = parse_people(m.group(1))
+            edition.authors = parse_editors(m.group(1))
             continue
 
     return print_obj
@@ -187,19 +187,58 @@ def get_boolean(string):
         return None
 
 
-def parse_people(string):
+def parse_composers(string):
+    composers = []
     data = [i.strip() for i in string.split(';') if i.strip()]
-    res = []
-    re_year = re.compile(r'\(([0-9]{4})?--([0-9]{4})?\)')
+    re_year = re.compile(r'\((\d*)/?\d?--?(\d*)/?\d?\)')
     for auth in data:
         person = Person()
-        match = re_year.search(auth)
-        if match:
-            if (match.group(1)):
-                person.born = int(match.group(1))
-            if (match.group(2)):
-                person.died = int(match.group(2))
-        auth = re_year.sub('', auth).strip()
-        person.name = auth
-        res.append(person)
-    return res
+        #match name
+        m1 = re.match(r"(.*) \((.*)\)", auth)
+        if m1:
+            name = m1.group(1).rstrip()
+        else:
+            name = auth.rstrip()
+        #match year
+        m2 = re_year.search(auth)
+        if m2:
+            if (m2.group(1)):
+                person.born = int(m2.group(1)) if len(m2.group(1)) == 4 else None
+            if (m2.group(2)):
+                person.died = int(m2.group(2)) if len(m2.group(2)) == 4 else None
+        person.name = name
+        composers.append(person)
+    return composers
+
+
+
+def parse_editors(string):
+    editors = []
+    if string is None or not string:
+        return editors
+    string = string.strip(", ")
+    s = re.split(r", ", string)
+
+    for i in range(len(s)):
+        ss = s[i].split("(")[0]
+        s[i] = ss.rstrip()
+
+    skip = False
+    for i in range(len(s)):
+        if skip:
+            skip = False
+            continue
+        person = Person()
+        if s[i].find(" ") != -1:
+            person.name = s[i]
+            editors.append(person)
+        else:
+            person.name = s[i] + ((", " + s[i + 1]) if i + 1 < len(s) else "")
+            editors.append(person)
+            skip = True
+    return editors
+
+prints = load("scorelib.txt")
+for single_print in prints:
+    single_print.format()
+

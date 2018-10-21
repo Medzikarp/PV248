@@ -190,7 +190,7 @@ def get_boolean(string):
 def parse_composers(string):
     composers = []
     data = [i.strip() for i in string.split(';') if i.strip()]
-    re_year = re.compile(r'(\d*)--?(\d*)')
+    re_year = re.compile(r'\((\d*)/?\d?--?(\d*)/?\d?\)')
     for auth in data:
         person = Person()
         #match name
@@ -203,19 +203,20 @@ def parse_composers(string):
         m2 = re_year.search(auth)
         if m2:
             if (m2.group(1)):
-                person.born = int(m2.group(1))
+                person.born = int(m2.group(1)) if len(m2.group(1)) == 4 else None
             if (m2.group(2)):
-                person.died = int(m2.group(2))
+                person.died = int(m2.group(2)) if len(m2.group(2)) == 4 else None
         person.name = name
         composers.append(person)
     return composers
 
 
+
 def parse_editors(string):
     editors = []
-    if string is None:
+    if string is None or not string:
         return editors
-    string = string.rstrip(", ")
+    string = string.strip(", ")
     s = re.split(r", ", string)
 
     for i in range(len(s)):
@@ -236,7 +237,6 @@ def parse_editors(string):
             editors.append(person)
             skip = True
     return editors
-
 
 prints = load("scorelib.txt")
 for single_print in prints:
