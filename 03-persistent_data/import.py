@@ -83,31 +83,27 @@ def store_to_db(conn, prints):
             score_id = saved_scores[composition.name]
 
         if composition.voices is not None and len(composition.voices) > 0:
-            for voice  in composition.voices:
+            for voice in composition.voices:
                 insert_object(conn, "voice",
                               ("number", "score", "range", "name"),
                               (composition.voices.index(voice), score_id, voice.range, voice.name))
 
         for score_author in composition.authors:
             author_id = store_person(conn, score_author, stored_people)
-            if (score_author.name + '_score' not in stored_people):
-                score_author_id = insert_object(conn, 'score_author',
-                                                ("score", "composer"),
-                                                (score_id, author_id))
-                stored_people[score_author.name + '_score'] = score_author_id
+            insert_object(conn, 'score_author',
+                          ("score", "composer"),
+                          (score_id, author_id))
 
         edition = print.edition
         edition_id = insert_object(conn, 'edition',
-                                 ('score', 'name', 'year'),
-                                 (score_id, edition.name, composition.year))
+                                   ('score', 'name', 'year'),
+                                   (score_id, edition.name, composition.year))
 
         for edition_author in edition.authors:
             author_id = store_person(conn, edition_author, stored_people)
-            if (edition_author.name + '_edition' not in stored_people):
-                edition_author_id = insert_object(conn, 'edition_author',
-                                                ("edition", "editor"),
-                                                (edition_id, author_id))
-                stored_people[edition_author.name + '_edition'] = edition_author_id
+            insert_object(conn, 'edition_author',
+                            ("edition", "editor"),
+                            (edition_id, author_id))
 
 
         insert_object(conn, 'print',
@@ -122,5 +118,3 @@ prints = load("scorelib.txt")
 store_to_db(conn, prints)
 conn.commit()
 conn.close
-
-
