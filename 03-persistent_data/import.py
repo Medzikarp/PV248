@@ -65,29 +65,63 @@ def store_person(conn, author, stored_people):
                 stored_people[author_born] = author.born
                 stored_people[author_died] = author_died
             else:
-                update_object(conn, 'person', ('born'), (author.born, author_id), 'id')
+                update_object(conn, 'person', ('born',), (author.born, author_id), 'id')
                 stored_people[author_born] = author.born
 
         else:
             if (author_died not in stored_people and author.died is not None):
-                update_object(conn, 'person', ('died'), (author.died, author_id), 'id')
+                update_object(conn, 'person', ('died',), (author.died, author_id), 'id')
                 stored_people[author_died] = author_died
     return author_id
 
+def same_voices(curs, voices, score_id) :
+    curs.execute("SELECT number, range, name FROM voice WHERE score = (?) ORDER BY number", (score_id, ))
+    stored_voices = curs.fetchall()
+    if len(stored_voices) != len(voices):
+        return False
+    for i in range(0, len(voices)):
+        if stored_voices[i][1] != voices[i].range or stored_voices[i][2] != voices[i].name:
+            return False
+    return True
+
+
+
+def same_authors(curs, authors, score_id):
+    curs.execute("SELECT name FROM score_author "
+                 "INNER JOIN person ON score_author.composer = person.id "
+                 "WHERE score = (?)", (score_id, ))
+    authors_names = [i[0] for i in curs.fetchall()]
+    if len(authors_names) != len(authors):
+        return False
+    self_authors_names = []
+    for a in authors:
+        self_authors_names.append(a.name)
+    return sorted(self_authors_names) == sorted(authors_names)
+
+
+def store_score(conn, name, genre, key, incipit, year, voices, authors):
+
+    curs = conn.cursor()
+    curs.execute('SELECT id, genre, key, incipit, year FROM score '
+                 'WHERE score.name = ? ', (name, ))
+
+    stored_score = curs.fetchall()
+    if stored_score:
+        for score in stored_score:
+            if score[1] == genre and score[2] == key and score[3] == incipit and score[4] == year:
+                if same_voices(curs, voices, score[0]) and same_authors(curs, authors, score[0]):
+                    return score[0]
+    return insert_object(conn, 'score',
+                         ('name', 'genre', 'key', 'incipit', 'year'),
+                         (name, genre, key, incipit, year))
 
 def store_to_db(conn, prints):
-    saved_scores = {}
     stored_people = {}
     for print in prints:
         composition = print.composition()
 
-        if (composition.name not in saved_scores):
-            score_id = insert_object(conn, 'score',
-                                    ('name', 'genre', 'key', 'incipit', 'year'),
-                                    (composition.name, composition.genre, composition.key, composition.incipit, composition.year))
-            saved_scores[composition.name] = score_id
-        else:
-            score_id = saved_scores[composition.name]
+        score_id = store_score(conn, composition.name, composition.genre, composition.key, composition.incipit, composition.year, composition.voices, composition.authors)
+
 
         if composition.voices is not None and len(composition.voices) > 0:
             for voice in composition.voices:
@@ -104,7 +138,7 @@ def store_to_db(conn, prints):
         edition = print.edition
         edition_id = insert_object(conn, 'edition',
                                    ('score', 'name', 'year'),
-                                   (score_id, edition.name, composition.year))
+                                   (score_id, edition.name, None))
 
         for edition_author in edition.authors:
             author_id = store_person(conn, edition_author, stored_people)
