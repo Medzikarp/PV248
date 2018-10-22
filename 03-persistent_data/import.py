@@ -87,17 +87,7 @@ def same_voices(curs, voices, score_id) :
     return True
 
 
-def same_authors(curs, authors, score_id):
-    curs.execute("SELECT name FROM score_author "
-                 "INNER JOIN person ON score_author.composer = person.id "
-                 "WHERE score = (?)", (score_id, ))
-    authors_names = [i[0] for i in curs.fetchall()]
-    if len(authors_names) != len(authors):
-        return False
-    self_authors_names = []
-    for a in authors:
-        self_authors_names.append(a.name)
-    return sorted(self_authors_names) == sorted(authors_names)
+
 
 
 def store_score(conn, name, genre, key, incipit, year, voices, authors):
@@ -110,11 +100,47 @@ def store_score(conn, name, genre, key, incipit, year, voices, authors):
     if stored_score:
         for score in stored_score:
             if score[1] == genre and score[2] == key and score[3] == incipit and score[4] == year:
-                if same_voices(curs, voices, score[0]) and same_authors(curs, authors, score[0]):
+                if same_voices(curs, voices, score[0]) and same_score_authors(curs, authors, score[0]):
                     return score[0]
     return insert_object(conn, 'score',
                          ('name', 'genre', 'key', 'incipit', 'year'),
                          (name, genre, key, incipit, year))
+
+
+def store_edition(conn, score_id, name, editors):
+    curs = conn.cursor()
+    curs.execute("SELECT id, name FROM edition WHERE score = (?)", (score_id, ))
+    editions = curs.fetchall()
+    if editions is not None:
+        for edition in editions:
+            if name == edition[1] and same_edition_authors(curs, editors, edition[0]):
+                return edition[0]
+
+    return insert_object(conn, 'edition',
+                         ('score', 'name', 'year'),
+                         (score_id, name, None))
+
+def same_edition_authors(curs, authors, editor_id):
+    sql_query = 'SELECT name FROM edition_author INNER JOIN person ON edition_author.editor = person.id WHERE edition = (?)'
+    curs.execute(sql_query , (editor_id, ))
+    authors_names = [i[0] for i in curs.fetchall()]
+    return same_authors(authors_names, authors)
+
+
+def same_score_authors(curs, authors, score_id):
+    sql_query = 'SELECT name FROM score_author INNER JOIN person ON score_author.composer = person.id WHERE score = (?)'
+    curs.execute(sql_query , (score_id, ))
+    authors_names = [i[0] for i in curs.fetchall()]
+    return same_authors(authors_names, authors)
+
+def same_authors(authors_names, authors):
+    if len(authors_names) != len(authors):
+        return False
+    self_authors_names = []
+    for a in authors:
+        self_authors_names.append(a.name)
+    return sorted(self_authors_names) == sorted(authors_names)
+
 
 def store_to_db(conn, prints):
     stored_people = {}
@@ -137,9 +163,8 @@ def store_to_db(conn, prints):
                           (score_id, author_id))
 
         edition = print.edition
-        edition_id = insert_object(conn, 'edition',
-                                   ('score', 'name', 'year'),
-                                   (score_id, edition.name, None))
+        edition_id = store_edition(conn, score_id, edition.name, edition.authors)
+
 
         for edition_author in edition.authors:
             author_id = store_person(conn, edition_author, stored_people)
