@@ -74,8 +74,10 @@ def store_person(conn, author, stored_people):
                 stored_people[author_died] = author_died
     return author_id
 
+
 def same_voices(curs, voices, score_id) :
-    curs.execute("SELECT number, range, name FROM voice WHERE score = (?) ORDER BY number", (score_id, ))
+    curs.execute("SELECT number, range, name FROM voice "
+                 "WHERE score = (?) ORDER BY number", (score_id, ))
     stored_voices = curs.fetchall()
     if len(stored_voices) != len(voices):
         return False
@@ -83,7 +85,6 @@ def same_voices(curs, voices, score_id) :
         if stored_voices[i][1] != voices[i].range or stored_voices[i][2] != voices[i].name:
             return False
     return True
-
 
 
 def same_authors(curs, authors, score_id):
