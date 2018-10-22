@@ -2,8 +2,8 @@ import re
 
 class Voice:
     def __init__(self):
-        self.range = ""
-        self.name = ""
+        self.range = None
+        self.name = None
 
     def __str__(self):
         voiceRange = (self.range if self.range else '')
@@ -124,22 +124,26 @@ def extract_record(record):
 
         m = re.match(incipitPattern, line)
         if m is not None:
-            composition.incipit = m.group(1)
+            if m.group(1):
+                composition.incipit = m.group(1).strip()
             continue
 
         m = re.match(keyPattern, line)
         if m is not None:
-            composition.key = m.group(1).strip()
+            if m.group(1):
+                composition.key = m.group(1).strip()
             continue
 
         m = re.match(genrePattern, line)
         if m is not None:
-            composition.genre = m.group(1).strip()
+            if m.group(1):
+                composition.genre = m.group(1).strip()
             continue
 
         m = re.match(compositionYearPattern, line)
         if m is not None:
-            composition.year = m.group(1)
+            if m.group(1):
+                composition.year = m.group(1)
             continue
 
         m = re.match(composersPattern, line)
@@ -149,19 +153,23 @@ def extract_record(record):
 
         m = re.match(editionPattern, line)
         if m is not None:
-            print_obj.edition.name = m.group(1)
+            if m.group(1).strip():
+                print_obj.edition.name = m.group(1).strip()
             continue
 
         m = re.match(voicePattern, line)
         if m is not None:
+            voice_string = m.group(1).replace('; ', ', ')
             voice = Voice()
             names = []
-            for voice_record in m.group(1).split(','):
-                if '--' in voice_record:
-                    voice.range = voice_record.strip()
-                else:
-                    names.append(voice_record.strip())
-            voice.name = ', '.join(names)
+            for voice_record in voice_string.split(','):
+                if (voice_record.strip()):
+                    if '--' in voice_record and voice.range is None:
+                        voice.range = voice_record.strip()
+                    else:
+                        names.append(voice_record.strip())
+            if len(names) > 0:
+                voice.name = ', '.join(names)
             composition.voices.append(voice)
             continue
 
@@ -190,25 +198,33 @@ def get_boolean(string):
 def parse_composers(string):
     composers = []
     data = [i.strip() for i in string.split(';') if i.strip()]
-    re_year = re.compile(r'\((\d*)/?\d?--?(\d*)/?\d?\)')
+    re_year = re.compile(r'(.*?)--?(.*)')
     for auth in data:
         person = Person()
         #match name
         m1 = re.match(r"(.*) \((.*)\)", auth)
+        m2 = None
         if m1:
             name = m1.group(1).rstrip()
+            m2 = re_year.search(m1.group(2))
         else:
             name = auth.rstrip()
         #match year
-        m2 = re_year.search(auth)
         if m2:
             if (m2.group(1)):
                 person.born = int(m2.group(1)) if len(m2.group(1)) == 4 else None
             if (m2.group(2)):
                 person.died = int(m2.group(2)) if len(m2.group(2)) == 4 else None
+        else:
+            if m1:
+                born_match = re.match(r"\*(\d*)", m1.group(2))
+                died_match = re.match(r"\+(\d*)", m1.group(2))
+                person.born = int(born_match.group(1)) if not born_match is None and len(born_match.group(1)) == 4 else None
+                person.died = int(died_match.group(1)) if not died_match is None and len(died_match.group(1)) == 4 else None
         person.name = name
         composers.append(person)
     return composers
+
 
 
 
@@ -237,8 +253,4 @@ def parse_editors(string):
             editors.append(person)
             skip = True
     return editors
-
-prints = load("scorelib.txt")
-for single_print in prints:
-    single_print.format()
 
