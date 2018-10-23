@@ -147,20 +147,35 @@ def store_to_db(conn, prints):
     for print in prints:
         composition = print.composition()
 
-        score_id = store_score(conn, composition.name, composition.genre, composition.key, composition.incipit, composition.year, composition.voices, composition.authors)
 
 
-        if composition.voices is not None and len(composition.voices) > 0:
-            for voice in composition.voices:
-                insert_object(conn, "voice",
-                              ("number", "score", "range", "name"),
-                              (composition.voices.index(voice) + 1, score_id, voice.range, voice.name))
 
-        for score_author in composition.authors:
-            author_id = store_person(conn, score_author, stored_people)
-            insert_object(conn, 'score_author',
-                          ("score", "composer"),
-                          (score_id, author_id))
+        curs = conn.cursor()
+        curs.execute('SELECT id, genre, key, incipit, year FROM score '
+                     'WHERE score.name = ? ', (composition.name, ))
+
+        stored_score = curs.fetchall()
+        if stored_score:
+            for score in stored_score:
+                if score[1] == composition.genre and score[2] == composition.key and score[3] == composition.incipit and score[4] == composition.year:
+                    if same_voices(curs, composition.voices, score[0]) and same_score_authors(curs, composition.authors, score[0]):
+                        score_id = score[0]
+        else:
+            score_id = insert_object(conn, 'score',
+                                     ('name', 'genre', 'key', 'incipit', 'year'),
+                                     (composition.name, composition.genre, composition.key, composition.incipit, composition.year))
+
+            if composition.voices is not None and len(composition.voices) > 0:
+                for voice in composition.voices:
+                    insert_object(conn, "voice",
+                                  ("number", "score", "range", "name"),
+                                  (composition.voices.index(voice) + 1, score_id, voice.range, voice.name))
+                for score_author in composition.authors:
+                    author_id = store_person(conn, score_author, stored_people)
+                    insert_object(conn, 'score_author',
+                                  ("score", "composer"),
+                                  (score_id, author_id))
+
 
         edition = print.edition
         edition_id = store_edition(conn, score_id, edition.name, edition.authors)
@@ -169,13 +184,13 @@ def store_to_db(conn, prints):
         for edition_author in edition.authors:
             author_id = store_person(conn, edition_author, stored_people)
             insert_object(conn, 'edition_author',
-                            ("edition", "editor"),
-                            (edition_id, author_id))
+                          ("edition", "editor"),
+                          (edition_id, author_id))
 
 
         insert_object(conn, 'print',
-                     ('id', 'partiture', 'edition'),
-                     (print.print_id, 'Y' if print.partiture else "N", edition_id))
+                      ('id', 'partiture', 'edition'),
+                      (print.print_id, 'Y' if print.partiture else "N", edition_id))
 
 
 
