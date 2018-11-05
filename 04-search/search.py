@@ -49,8 +49,8 @@ def get_prints(curs, person_id):
 
 
         editors_info = curs.execute('SELECT * FROM person '
-                                'JOIN edition_author ON person.id = edition_author.editor '
-                                'WHERE edition_author.edition=?', (print_info[8],)).fetchall()
+                                    'JOIN edition_author ON person.id = edition_author.editor '
+                                    'WHERE edition_author.edition=?', (print_info[8],)).fetchall()
         if editors_info:
             editors = []
             for editor_info in editors_info:
@@ -67,7 +67,7 @@ def get_prints(curs, person_id):
 
 
         voices_info = curs.execute('SELECT * FROM voice '
-                                      'WHERE score=?', (print_info[7],)).fetchall()
+                                   'WHERE score=?', (print_info[7],)).fetchall()
         if voices_info:
             voices = {}
             for voice_info in voices_info:
