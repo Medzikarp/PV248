@@ -49,7 +49,7 @@ deadlines = np.array(deadlines)
 deadlines = np.reshape(deadlines, (deadlines.size, 1))
 
 regression_slope = np.linalg.lstsq(deadlines, cum_points_by_dates.values)[0].item(0)
-dict['regression_slope'] = regression_slope
+dict['regression slope'] = regression_slope
 date_16 = str(class_start + timedelta(16 / regression_slope))
 date_20 = str(class_start + timedelta(20 / regression_slope))
 dict['date 16'] = date_16 if regression_slope != 0 else 'inf'
