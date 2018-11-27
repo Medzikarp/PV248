@@ -146,7 +146,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             if method is not "GET" and not "POST":
                 method = "GET"
             url = json_data["url"]
-            if method is "POST":
+            if method == "POST":
                 content = json_data["content"]
             else:
                 content = None
