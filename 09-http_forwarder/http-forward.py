@@ -4,6 +4,8 @@ import http.client
 import ssl
 import socket
 import json
+import OpenSSL.crypto as crypto
+import os
 
 
 class Server(HTTPServer):
@@ -12,19 +14,29 @@ class Server(HTTPServer):
         HTTPServer.serve_forever(self)
 
 
+def get_hostname_path(url):
+    url = url.replace("https://", "")
+    url = url.replace("http://", "")
+    hostname = url.split("/", 1)[0]
+    parts = url.split("/", 1)
+    path = None
+    if len(parts) > 1:
+        path = "/" + parts[1]
+    return hostname, path
+
+
 def execute_request(method, upstream, headers, content, timeout=1):
     if "https" in upstream:
-        url = upstream.replace("https://", "")
-        domain = url.split("/", 1)[0]
-        path = "/" + url.split("/", 1)[1]
-        conn = http.client.HTTPSConnection(domain, context=ssl._create_unverified_context(), timeout=1)
+        hostname, path = get_hostname_path(upstream)
+        ctx = ssl.create_default_context()
+        ctx.load_default_certs()
+        print("Loading CA from " + ssl.get_default_verify_paths().openssl_cafile)
+        conn = http.client.HTTPSConnection(hostname, context=ctx, timeout=timeout)
         conn.request(method, path, content, headers=headers)
         response = conn.getresponse()
     else:
-        url = upstream.replace("http://", "")
-        domain = url.split("/", 1)[0]
-        path = "/" + url.split("/", 1)[1]
-        conn = http.client.HTTPConnection(domain, timeout=1)
+        hostname, path = get_hostname_path(upstream)
+        conn = http.client.HTTPConnection(hostname, timeout=timeout)
         conn.request(method, path, content, headers=headers)
         response = conn.getresponse()
     return response
@@ -38,15 +50,53 @@ def get_charset(headers):
         return charset
 
 
+def get_certificate_san(x509cert):
+    san = ''
+    ext_count = x509cert.get_extension_count()
+    for i in range(0, ext_count):
+        ext = x509cert.get_extension(i)
+        if 'subjectAltName' in str(ext.get_short_name()):
+            san = ext.__str__()
+    return san
+
+
+def get_ssl_hosts(hostname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((hostname, 443))
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    s = ctx.wrap_socket(s, server_hostname=hostname)
+
+    # get certificate
+    cert_bin = s.getpeercert(True)
+    x509 = crypto.load_certificate(crypto.FILETYPE_ASN1,cert_bin)
+    san = get_certificate_san(x509)
+    hosts = []
+    hosts.append(x509.get_subject().CN)
+    items = [x.strip() for x in san.split(',')]
+    for item in items:
+        prefix = "DNS:"
+        if item.startswith(prefix):
+            item = item[len(prefix):]
+        if item not in hosts:
+            hosts.append(item)
+    return hosts
+
+
 class RequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         json_response = {}
-        response = None;
+        response = None
+
         try:
             response = execute_request("GET", self.upstream, self.headers, None)
         except socket.timeout:
             json_response["code"] = "timeout"
+        except ssl.SSLError as ex:
+            print(ex)
+            json_response["certificate valid"] = "false"
 
         json_data = None
         if response:
@@ -62,10 +112,18 @@ class RequestHandler(BaseHTTPRequestHandler):
                 print("Unable to parse json body", e)
                 json_response["content"] = body
 
+        if not json_response.get("certificate valid"):
+            json_response["certificate valid"] = "true"
+
+        hostname, _ = get_hostname_path(upstream)
+        hosts = get_ssl_hosts(hostname)
+        if hosts is not None:
+            json_response["certificate for"] = hosts
+
         self.send_response(200)
         self.send_header('Content-Type', 'application/json;charset=utf-8')
         self.end_headers()
-        self.wfile.write(bytes(json.dumps(json_response), "UTF-8"))
+        self.wfile.write(bytes(json.dumps(json_response, indent=2), "UTF-8"))
 
     def do_POST(self):
         json_response = {}
@@ -75,13 +133,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         try:
             json_data = json.loads(post_data)
             method = json_data["type"]
-            if method is not "GET" or not "POST":
+            if method is not "GET" and not "POST":
                 method = "GET"
             url = json_data["url"]
             content = json_data["content"]
-            timeout = json_data["timeout"]
+            timeout = int(json_data["timeout"])
             headers = json_data["headers"]
             response = execute_request(method, url, headers, content, timeout)
+        except socket.timeout:
+            json_response["code"] = "timeout"
         except Exception as ex:
             print(ex)
             self.send_response(200)
@@ -94,7 +154,6 @@ class RequestHandler(BaseHTTPRequestHandler):
             json_response["headers"] = response.getheaders()
             charset = get_charset(response.headers)
             body = response.read().decode(charset)
-            body = body if body else ""
             try:
                 if body:
                     json_data = json.loads(body)
@@ -104,11 +163,14 @@ class RequestHandler(BaseHTTPRequestHandler):
             except Exception as e:
                 print("Unable to parse json body", e)
                 json_response["content"] = body
-
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json;charset=utf-8')
-            self.end_headers()
-            self.wfile.write(bytes(json.dumps(json_response), "UTF-8"))
+        hostname, _ = get_hostname_path(url)
+        hosts = get_ssl_hosts(hostname)
+        if hosts is not None:
+            json_response["certificate for"] = hosts
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json;charset=utf-8')
+        self.end_headers()
+        self.wfile.write(bytes(json.dumps(json_response, indent=2), "UTF-8"))
 
 
 
