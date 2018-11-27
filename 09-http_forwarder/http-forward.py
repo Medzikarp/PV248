@@ -144,7 +144,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             if method is not "GET" and not "POST":
                 method = "GET"
             url = json_data["url"]
-            content = json_data["content"] if method is "POST" else content = None
+            content = json_data["content"] if method is "POST" else None
             timeout = int(json_data["timeout"])
             headers = format_headers(json_data["headers"])
             if "Host" in headers and "localhost" in headers["Host"]:
