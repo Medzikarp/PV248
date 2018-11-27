@@ -5,7 +5,6 @@ import ssl
 import socket
 import json
 import OpenSSL.crypto as crypto
-import os
 
 
 class Server(HTTPServer):
@@ -134,7 +133,6 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(bytes(json.dumps(json_response, indent=2), "UTF-8"))
 
-
     def do_POST(self):
         json_response = {}
         content_length = int(self.headers['Content-Length'])
@@ -151,7 +149,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             else:
                 content = None
             timeout = int(json_data["timeout"])
-            headers = format_headers(json_data["headers"])
+            headers = json_data["headers"]
             if "Host" in headers and "localhost" in headers["Host"]:
                 del headers["Host"]
             response = execute_request(method, url, headers, content, timeout)
@@ -169,7 +167,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             return
 
         if response:
-            json_response["headers"] = response.getheaders()
+            json_response["headers"] = format_headers(response.getheaders())
             charset = get_charset(response.headers)
             body = response.read().decode(charset)
             try:
