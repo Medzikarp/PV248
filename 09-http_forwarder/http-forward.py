@@ -147,6 +147,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             content = json_data["content"]
             timeout = int(json_data["timeout"])
             headers = format_headers(json_data["headers"])
+            if "Host" in headers and "localhost" in headers["Host"]:
+                del headers["Host"]
             response = execute_request(method, url, headers, content, timeout)
         except socket.timeout:
             json_response["code"] = "timeout"
