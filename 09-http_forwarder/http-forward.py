@@ -167,6 +167,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             return
 
         if response:
+            if not json_response.get("code"):
+                json_response["code"] = response.status
             json_response["headers"] = format_headers(response.getheaders())
             charset = get_charset(response.headers)
             body = response.read().decode(charset)
