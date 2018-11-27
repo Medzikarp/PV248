@@ -138,14 +138,16 @@ class RequestHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length).decode(get_charset(self.headers))
         response = None
+        method = None
         try:
             json_data = json.loads(post_data)
-            method = json_data["type"]
-            if method is not "GET" and not "POST":
+            if json_data.get("type"):
+                method = json_data["type"]
+            if method is not "GET" and method is not "POST":
                 method = "GET"
             url = json_data["url"]
             if method == "POST":
-                content = json_data["content"]
+                content = json_data["content"].encode('utf-8')
             else:
                 content = None
             timeout = int(json_data["timeout"])
@@ -154,19 +156,16 @@ class RequestHandler(BaseHTTPRequestHandler):
                 del headers["Host"]
             if "Content-Type".lower() not in map(str.lower, headers.keys()):
                 headers["Content-Type"] = "application/json;charset=utf-8"
-            response = execute_request(method, url, headers, content.encode('utf-8'), timeout)
+            response = execute_request(method, url, headers, content, timeout)
         except socket.timeout:
             json_response["code"] = "timeout"
         except ssl.SSLError as ex:
             print(ex)
             json_response["certificate valid"] = "false"
-        except Exception as ex:
-            print(ex)
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(bytes(json.dumps({"json": "invalid json"}), "UTF-8"))
-            return
+        except json.JSONDecodeError:
+            json_response["json"] = "invalid json"
+        except socket.gaierror:
+            json_response["code"] = "404"
 
         if response:
             if not json_response.get("code"):
@@ -184,13 +183,13 @@ class RequestHandler(BaseHTTPRequestHandler):
                 print("Unable to parse json body", e)
                 json_response["content"] = body
 
-        if "https://" in upstream:
-            if not json_response.get("certificate valid"):
-                json_response["certificate valid"] = "true"
-            hostname, _ = get_hostname_path(url)
-            hosts = get_ssl_hosts(hostname)
-            if hosts is not None:
-                json_response["certificate for"] = hosts
+                if "https://" in upstream:
+                    if not json_response.get("certificate valid"):
+                        json_response["certificate valid"] = "true"
+                    hostname, _ = get_hostname_path(url)
+                    hosts = get_ssl_hosts(hostname)
+                if hosts is not None:
+                    json_response["certificate for"] = hosts
 
         self.send_response(200)
         self.send_header('Content-Type', 'application/json;charset=utf-8')
