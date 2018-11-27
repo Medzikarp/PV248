@@ -152,7 +152,9 @@ class RequestHandler(BaseHTTPRequestHandler):
             headers = json_data["headers"]
             if "Host" in headers and "localhost" in headers["Host"]:
                 del headers["Host"]
-            response = execute_request(method, url, headers, content, timeout)
+            if "Content-Type".lower() not in map(str.lower, headers.keys()):
+                headers["Content-Type"] = "application/json;charset=utf-8"
+            response = execute_request(method, url, headers, content.encode('utf-8'), timeout)
         except socket.timeout:
             json_response["code"] = "timeout"
         except ssl.SSLError as ex:
