@@ -90,6 +90,7 @@ def format_headers(headers):
         new_headers[header[0]] = header[1]
     return new_headers
 
+
 class RequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
@@ -133,6 +134,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(bytes(json.dumps(json_response, indent=2), "UTF-8"))
 
+
     def do_POST(self):
         json_response = {}
         content_length = int(self.headers['Content-Length'])
@@ -144,7 +146,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             if method is not "GET" and not "POST":
                 method = "GET"
             url = json_data["url"]
-            content = json_data["content"] if method is "POST" else None
+            if method is "POST":
+                content = json_data["content"]
+            else:
+                content = None
             timeout = int(json_data["timeout"])
             headers = format_headers(json_data["headers"])
             if "Host" in headers and "localhost" in headers["Host"]:
