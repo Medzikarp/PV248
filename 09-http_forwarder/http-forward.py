@@ -141,31 +141,44 @@ class RequestHandler(BaseHTTPRequestHandler):
         method = None
         try:
             json_data = json.loads(post_data)
+
             if json_data.get("type"):
                 method = json_data["type"]
+
             if method is not "GET" and method is not "POST":
                 method = "GET"
-            url = json_data["url"]
+
             if method == "POST":
                 content = json_data["content"].encode('utf-8')
             else:
                 content = None
-            timeout = int(json_data["timeout"])
-            headers = json_data["headers"]
-            if "Host" in headers and "localhost" in headers["Host"]:
-                del headers["Host"]
-            if "Content-Type".lower() not in map(str.lower, headers.keys()):
-                headers["Content-Type"] = "application/json;charset=utf-8"
+
+            if json_data.get("timeout"):
+                timeout = int(json_data["timeout"])
+            else:
+                timeout = 1
+
+            if json_data.get("headers"):
+                headers = json_data["headers"]
+                if "Host" in headers and "localhost" in headers["Host"]:
+                    del headers["Host"]
+                if "Content-Type".lower() not in map(str.lower, headers.keys()):
+                    headers["Content-Type"] = "application/json;charset=utf-8"
+            else:
+                headers = {}
+
             response = execute_request(method, url, headers, content, timeout)
         except socket.timeout:
             json_response["code"] = "timeout"
         except ssl.SSLError as ex:
             print(ex)
             json_response["certificate valid"] = "false"
-        except json.JSONDecodeError:
-            json_response["json"] = "invalid json"
         except socket.gaierror:
             json_response["code"] = "404"
+        except json.JSONDecodeError:
+            json_response["json"] = "invalid json"
+        except Exception:
+            json_response["json"] = "invalid json"
 
         if response:
             if not json_response.get("code"):
