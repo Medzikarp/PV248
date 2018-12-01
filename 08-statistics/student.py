@@ -29,6 +29,9 @@ else:
     student_row = student_row.drop("student", axis=1)
     student_row = student_row.transpose()
 
+if isinstance(student_row, pd.Series):
+    student_row = student_row.to_frame()
+
 points_by_exercises = format_exercises(student_row)
 points_by_exercises.sort_index(axis=0, inplace=True)
 
