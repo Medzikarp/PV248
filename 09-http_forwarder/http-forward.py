@@ -136,6 +136,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         json_response = {}
         response = None
+        hosts = None
         if self.headers.get("Content-Length"):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length).decode(get_charset(self.headers))
@@ -206,8 +207,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                         json_response["certificate valid"] = "true"
                     hostname, _ = get_hostname_path(url)
                     hosts = get_ssl_hosts(hostname)
-                if hosts is not None:
-                    json_response["certificate for"] = hosts
+                    if hosts is not None:
+                        json_response["certificate for"] = hosts
 
         self.send_response(200)
         self.send_header('Content-Type', 'application/json;charset=utf-8')
