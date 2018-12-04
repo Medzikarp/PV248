@@ -10,11 +10,10 @@ class ThreadingServer(ThreadingMixIn, HTTPServer):
 
 class RequestHandler(CGIHTTPRequestHandler):
 
-
     def do_GET(self):
         url_path = self.path.split("?")[0]
         if url_path.endswith(".cgi") or ".cgi/" in url_path:
-            self.cgi_info = content_dir, self.path[1:]
+            self.cgi_info = "", self.path[1:]
             self.run_cgi()
         else:
             self.serve_text()
@@ -22,7 +21,7 @@ class RequestHandler(CGIHTTPRequestHandler):
     def do_POST(self):
         url_path = self.path.split("?")[0]
         if url_path.endswith(".cgi") or ".cgi/" in url_path:
-            self.cgi_info = content_dir, self.path[1:]
+            self.cgi_info = "", self.path[1:]
             self.run_cgi()
         else:
             self.serve_text()
@@ -48,9 +47,10 @@ class RequestHandler(CGIHTTPRequestHandler):
 port = int(sys.argv[1])
 if len(sys.argv) == 3:
     content_dir = sys.argv[2]
-else:
-    content_dir = ""
+    os.chdir(content_dir)
+
 server = ThreadingServer(('', port), RequestHandler)
 server.serve_forever()
 print('Listening on localhost:%s' % port)
+
 
