@@ -33,6 +33,11 @@ class RequestHandler(CGIHTTPRequestHandler):
             file_size = os.path.getsize(abs_path)
             self.send_response(200)
             self.send_header('Content-Length', str(file_size))
+            if local_path.endswith(".txt"):
+                self.send_header('Content-Type', "text/plain")
+            else:
+                self.send_header('Content-Type', "application/octet-stream")
+            self.end_headers()
             with open(abs_path, "rb") as f:
                 while True:
                     c = f.read(1024)
