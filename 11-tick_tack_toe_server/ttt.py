@@ -32,8 +32,6 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif game["board"][x][y] != 0:
             raise Exception("Position already taken on x:%s y:%s" % (x, y))
 
-
-
     def send_200_resp(self, json_string):
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
@@ -89,7 +87,8 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             response_data = {}
-            response_data["bad"] = "Invalid params. Exc:" + str(e)
+            response_data["status"] = "bad"
+            response_data["message"] = "Invalid params. Exc:" + str(e)
             self.send_200_resp(dict_to_json(response_data))
 
 
@@ -119,7 +118,6 @@ class RequestHandler(BaseHTTPRequestHandler):
             if board[2][0] == p and board[1][1] == p and board[0][2] == p:
                 return p
         return -1
-
 
     def play_game(self, params, request_path):
         response_data = {}
@@ -176,9 +174,19 @@ class RequestHandler(BaseHTTPRequestHandler):
         # check game_id exists
         try:
             game_id = int(params["game"][0])
+        except Exception as e:
+            if isinstance(e, KeyError):
+                self.send_200_resp(format_bad_response("Parameter \'game\' is missing."))
+            if isinstance(e, ValueError):
+                self.send_200_resp(format_bad_response("Invalid format of game parameter."))
+            return False
+
+        try:
             self.games[game_id]
-        except:
+        except Exception as ex:
             self.send_error(404)
+            return False
+        return True
 
     def do_GET(self):
 
@@ -191,11 +199,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         if "/start" in request_path:
             self.start_game(params, request_path)
         elif "/status" in request_path:
-            self.check_id_exists(params)
-            self.status_game(params, request_path)
+            if (self.check_id_exists(params)):
+                self.status_game(params, request_path)
         elif "/play" in request_path:
-            self.check_id_exists(params)
-            self.play_game(params, request_path)
+            if (self.check_id_exists(params)):
+                self.play_game(params, request_path)
 
 
 
