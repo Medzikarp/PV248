@@ -69,7 +69,8 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             response_data = {}
-            response_data["bad"] = "Invalid params. Exc:" + str(e)
+            response_data["status"] = "bad"
+            response_data["message"] = "Invalid params. Exc:" + str(e)
             self.send_200_resp(dict_to_json(response_data))
 
     def status_game(self, params, request_path):
