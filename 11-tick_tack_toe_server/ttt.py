@@ -44,7 +44,6 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json_string)
 
-
     def new_game(self, name):
             newId = len(self.games) + 1
             self.games[newId] = {}
@@ -61,8 +60,12 @@ class RequestHandler(BaseHTTPRequestHandler):
     def start_game(self, params, request_path):
         try:
             name = params["name"][0]
-            game_id = self.new_game(name)
+        except:
+            name = ""
+            print("name not specified")
 
+        try:
+            game_id = self.new_game(name)
             response_data = {}
             response_data["id"] = game_id
             self.send_200_resp(dict_to_json(response_data))
@@ -70,7 +73,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         except Exception as e:
             response_data = {}
             response_data["status"] = "bad"
-            response_data["message"] = "Invalid params. Exc:" + str(e)
+            response_data["message"] = "Unable to create game. Exc: " + str(e)
             self.send_200_resp(dict_to_json(response_data))
 
     def status_game(self, params, request_path):
@@ -91,7 +94,6 @@ class RequestHandler(BaseHTTPRequestHandler):
             response_data["status"] = "bad"
             response_data["message"] = "Invalid params. Exc:" + str(e)
             self.send_200_resp(dict_to_json(response_data))
-
 
     def get_winner(self, game_id):
         board = self.games[game_id]["board"]
@@ -170,7 +172,6 @@ class RequestHandler(BaseHTTPRequestHandler):
                 response_data["message"] = str(e)
             self.send_200_resp(dict_to_json(response_data))
 
-
     def check_id_exists(self, params):
         # check game_id exists
         try:
@@ -205,8 +206,6 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif "/play" in request_path:
             if (self.check_id_exists(params)):
                 self.play_game(params, request_path)
-
-
 
 
 port = int(sys.argv[1])
