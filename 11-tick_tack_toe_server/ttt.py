@@ -206,6 +206,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif "/play" in request_path:
             if (self.check_id_exists(params)):
                 self.play_game(params, request_path)
+        else:
+            self.send_error(404)
 
 
 port = int(sys.argv[1])
