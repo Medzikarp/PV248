@@ -1,5 +1,6 @@
 import re
 
+
 class Voice:
     def __init__(self):
         self.range = None
@@ -254,7 +255,5 @@ def parse_editors(string):
             skip = True
     return editors
 
-prints = load("scorelib.txt")
-for single_print in prints:
-    single_print.format()
+
 
